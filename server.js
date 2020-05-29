@@ -24,7 +24,7 @@ const pusher = new Pusher({
 
 app.prepare()
   .then(() => {
-    const server = express().use(handler);
+    const server = express()
     const commentsHistory = { comments: [] };
 
     server.use(cors());

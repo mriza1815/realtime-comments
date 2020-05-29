@@ -35,8 +35,9 @@ const nameBadgeStyles = {
 const CommentsWidget = () => {
   const [comments, setComments] = useState([]);
   const [person, setPerson] = useState(null);
-  let pusher;
+  //const [pusher, setPusher] = useState(null);
   let channel;
+  let pusher;
 
   useEffect(() => {
     init();
@@ -46,25 +47,29 @@ const CommentsWidget = () => {
   }, []);
 
   const init = () => {
+    
     pusher = new Pusher(process.env.PUSHER_APP_KEY, {
       cluster: process.env.PUSHER_APP_CLUSTER,
       encrypted: true,
-    });
+    })
 
     channel = pusher.subscribe("post-comments");
 
-    channel.bind("new-comment", ({ comment = null }) => {
-      comment && comments.push(comment);
-      setComments(comments);
-    });
+    channel.bind("new-comment",setNewComment)
 
     pusher.connection.bind("connected", () => {
+      console.log("connected")
       axios.post("/comments").then((response) => {
-        const comments = response.data.comments;
+        console.log("get comments", response)
+        const comments = response.data.comments
         setComments(comments);
       });
     });
   };
+  
+  const setNewComment = comment => {
+    comment && setComments(c => [...c, comments]);
+  }
 
   const handleKeyUp = (evt) => {
     const value = evt.target.value;
@@ -108,6 +113,8 @@ const CommentsWidget = () => {
       );
     });
   };
+
+  console.log("commentss", comments)
 
   return (
     <Fragment>
