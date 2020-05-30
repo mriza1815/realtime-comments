@@ -1,92 +1,73 @@
 import React, { useState, useEffect } from 'react';
+import {connect} from 'react-redux';
+import {makeLogin, makeLogout} from '../../redux/auth/action';
 import axios from 'axios';
 import Layout from '../../components/Layout';
 import CommentsWidget from '../../components/CommentsWidget';
-import {Link} from '../../routes'
-import * as firebase from "firebase"
-import {firebaseConfig} from "../../firebase.config"
-
-let googlePr
-let facebookPr
+import FirebaseLibrary from '../../library/firebase';
+import {loginSuccessMsg, loginErrorMsg, prepareUserData} from '../../library/constants';
+import { useToasts } from 'react-toast-notifications'
+import FormModal from '../../components/Modal';
 
 const Dashboard = props => {
 
-  const [post, setPost] = useState(null)
-  const [googleProvider, setGoogleProvider] = useState(null)
-
-  console.log("Welcome home page", props.url.query.topic)
+  const [ post, setPost] = useState(null)
+  const [ modal, setModal] = useState(false)
+  const { addToast } = useToasts()
+  const { makeLogin, user, query } = props
   
-  useEffect(() => { 
-    initFirebase()
-    init() 
-  }, [])
-
-  const initFirebase = () => {
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig)
-      googlePr = new firebase.auth.GoogleAuthProvider();
-      googlePr.addScope('https://www.googleapis.com/auth/contacts.readonly');
-      //setGoogleProvider(googlePr)
-      
-      facebookPr = new firebase.auth.FacebookAuthProvider();
-      facebookPr.addScope('user_birthday');
-    }
-  }
+  const {googlePr, facebookPr, makeEmailLogin, makeSocialLogin } = FirebaseLibrary(props)
+  const selectedTopic = query.topic || "sport"
+  
+  useEffect(() => { init() }, [])
 
   const init = () => {
+    const userData = localStorage.getItem("userData") || null
+    makeLogin(userData ? JSON.parse(userData) : null)
     axios.get('https://baconipsum.com/api/?type=meat-and-filler&paras=4&format=text')
     .then(response => setPost(response.data));
   }
 
-  const emailAuth = () => {
-    firebase.auth().createUserWithEmailAndPassword("steki632211@yahoo.com.tr", "mriza1815")
+  const emailAuth = (email, password) => {
+    setModal(false)
+    makeEmailLogin(email, password)
     .then(res => {
-      if (res.user) Auth.setLoggedIn(true);
+      console.log("email", res)
+      const mapUserData = prepareUserData(res)
+      makeLogin(mapUserData)
+      localStorage.setItem("userData", mapUserData)
+      addToast(loginSuccessMsg, { appearance: 'success' })
     })
-    .catch(e => {
-      console.log("catch", e.message)
+    .catch(e => { 
+      console.log("catch", e.message) 
+      addToast(e.message || loginErrorMsg, { appearance: 'error' })
     });
   }
 
   const socialAuth = provider => {
-    firebase.auth().signInWithPopup(provider).then(function(result) {
-      console.log("social", result)
-      // This gives you a Google Access Token. You can use it to access the Google API.
-      var token = result.credential.accessToken;
-      // The signed-in user info.
-      var user = result.user;
-      // ...
-    }).catch(function(error) {
-      // Handle Errors here.
-      var errorCode = error.code;
-      var errorMessage = error.message;
-      // The email of the user's account used.
-      var email = error.email;
-      // The firebase.auth.AuthCredential type that was used.
-      var credential = error.credential;
-      // ...
+    makeSocialLogin(provider).then(result => {
+      const mapUserData = prepareUserData(result)
+      makeLogin(mapUserData)
+      localStorage.setItem("userData", JSON.stringify(mapUserData))
+      addToast(loginSuccessMsg, { appearance: 'success' })
+    }).catch(e => {
+      console.log("socialAuth error", e)
+      addToast(e.code || e.message || loginErrorMsg, { appearance: 'error' })
     });
   }
 
   return (
     <Layout pageTitle="Realtime Comments">
-      <Link route='profile' params={{id: 'asasa'}}>
-        <a>Profile gitme deneme</a>
-      </Link>
-      
-      <button onClick={emailAuth}>Email auth</button>
-      <button onClick={() => socialAuth(googlePr)}>Google auth</button>
-      <button onClick={() => socialAuth(facebookPr)}>facebook auth</button>
       <main className="container-fluid position-absolute h-100 bg-white">
         <div className="row position-absolute w-100 h-100">
-
+          <FormModal show={modal} onSave={emailAuth} handleClose={() => setModal(false)}/>
           <section className="col-md-8 d-flex flex-row flex-wrap align-items-center align-content-center border-right border-gray px-0">
 
             { post && <div className="position-relative h-100">
 
               <div className="px-5 mt-5 pt-5 mx-5">
-                <span className="d-block px-5 mx-5 pt-5 h5 text-uppercase text-primary font-weight-bold mb-3">Editor's Pick</span>
-                <span className="d-block px-5 mx-5 pb-5 h1 text-dark border-bottom border-gray">Getting Started with Lorem Ipsum</span>
+                <span className="d-block px-5 mx-5 pt-5 h5 text-uppercase text-primary font-weight-bold mb-3">HOMEPAGE</span>
+                <span className="d-block px-5 mx-5 pb-5 h1 text-dark border-bottom border-gray">{`Here is ${selectedTopic} topic`}</span>
               </div>
               
               <div className="d-block h-50 px-5 mt-5 pt-3 mx-5 position-relative" style={{ overflowY: 'auto' }}>
@@ -98,7 +79,14 @@ const Dashboard = props => {
           </section>
 
           <section className="col-md-4 position-relative d-flex flex-wrap h-100 align-items-start align-content-between bg-light px-0">
-            { post && <CommentsWidget /> }
+            { post && 
+              <CommentsWidget googleLogin={() => socialAuth(googlePr)}
+                selectedTopic={selectedTopic}
+                userData={user}
+                facebookLogin={() => socialAuth(facebookPr)}
+                emailLogin={() => setModal(true)} 
+              /> 
+            }
           </section>
 
         </div>
@@ -107,4 +95,14 @@ const Dashboard = props => {
   );
 };
 
-export default Dashboard
+const mapStateToProps = state => ({
+  user: state.auth.user
+});
+
+const mapDispatchToProps = {
+  makeLogin, makeLogout
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(Dashboard);
+
+

@@ -36,9 +36,9 @@ app.prepare()
     });
 
     server.post('/comment', (req, res, next) => {
-      const { person = null, comment = '', timestamp = (+new Date) } = req.body;
+      const { person = null, comment = '', timestamp = (+new Date), uid = null, topic = null } = req.body;
       const sentimentScore = sentiment.analyze(comment).score;
-      const commentObject = { person, comment, timestamp, sentiment: sentimentScore };
+      const commentObject = { person, comment, timestamp, sentiment: sentimentScore, uid, topic };
 
       commentsHistory.comments.push(commentObject);
       pusher.trigger('post-comments', 'new-comment', { comment: commentObject });
