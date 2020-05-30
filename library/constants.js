@@ -3,7 +3,8 @@ export const emptyCommentList = "Not found any comment yet!"
 
 export const logoutSuccess = "Logout successfully"
 export const loginSuccessMsg = "Login process successfully completed"
-export const loginErrorMsg = "Something went wrong during login process! Please try again"
+export const registerSuccessMsg = "Register process successfully completed"
+export const loginErrorMsg = "Something went wrong! Please try again"
 
 export const socialEmailButtonConfig = {
   text: "Email",
@@ -48,6 +49,14 @@ export const prepareUserData = data => ({
   token: data.credential && data.credential.accessToken ||data.user.refreshToken || null,
   email: data.user.email || null,
   uid: data.user.uid || null
+})
+
+export const prepareUserDataWithEmail = user => ({
+  name: user.displayName || user.name || "Noname User",
+  displayName: makeShowName(user.displayName || user.name || "Noname User"),
+  token: user.refreshToken && user.refreshToken || null,
+  email: user.email || null,
+  uid: user.uid || null
 })
 
 const makeShowName = name => {

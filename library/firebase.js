@@ -20,11 +20,21 @@ const FirebaseLibrary = props => {
     }
   }
 
-  const makeEmailLogin = (email, password) => {
+  const makeEmailLogin = (isLogin, name, email, password) => {
     return new Promise((resolve, reject) => {
-      firebase.auth().createUserWithEmailAndPassword(email, password)
-      .then(resolve)
-      .catch(reject);
+      if(isLogin){
+        firebase.auth().signInWithEmailAndPassword(email, password)
+        .then(res => resolve(res.user))
+        .catch(reject);
+      } else {
+        firebase.auth().createUserWithEmailAndPassword(email, password)
+        .then(res =>{
+          firebase.auth().onAuthStateChanged(user => {
+            user.updateProfile({displayName: name}).then(() => resolve(user))
+          })
+        })
+        .catch(reject);
+      }
     })
   }
 

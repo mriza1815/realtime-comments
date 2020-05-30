@@ -5,7 +5,7 @@ import axios from 'axios';
 import Layout from '../../components/Layout';
 import CommentsWidget from '../../components/CommentsWidget';
 import FirebaseLibrary from '../../library/firebase';
-import {loginSuccessMsg, loginErrorMsg, prepareUserData} from '../../library/constants';
+import { registerSuccessMsg, loginSuccessMsg, loginErrorMsg, prepareUserData, prepareUserDataWithEmail} from '../../library/constants';
 import { useToasts } from 'react-toast-notifications'
 import FormModal from '../../components/Modal';
 
@@ -28,15 +28,14 @@ const Dashboard = props => {
     .then(response => setPost(response.data));
   }
 
-  const emailAuth = (email, password) => {
+  const emailAuth = (isLogin, name, email, password) => {
     setModal(false)
-    makeEmailLogin(email, password)
+    makeEmailLogin(isLogin, name, email, password)
     .then(res => {
-      console.log("email", res)
-      const mapUserData = prepareUserData(res)
+      const mapUserData = prepareUserDataWithEmail(res)
       makeLogin(mapUserData)
-      localStorage.setItem("userData", mapUserData)
-      addToast(loginSuccessMsg, { appearance: 'success' })
+      localStorage.setItem("userData", JSON.stringify(mapUserData))
+      addToast(isLogin ? loginSuccessMsg : registerSuccessMsg, { appearance: 'success' })
     })
     .catch(e => { 
       console.log("catch", e.message) 
