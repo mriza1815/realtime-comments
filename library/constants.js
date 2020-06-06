@@ -1,5 +1,6 @@
 export const socialLoginTitle = "Please login with the following options"
 export const emptyCommentList = "Not found any comment yet!"
+export const authInfo = "Please login for make and see comments!"
 
 export const logoutSuccess = "Logout successfully"
 export const loginSuccessMsg = "Login process successfully completed"
@@ -43,12 +44,17 @@ export const nameBadgeStyles = {
   cursor: "pointer",
 };
 
+export const adminEmail = "turan@turan.com"
+
+export const isUserAdmin = () => localStorage.getItem("userData") && JSON.parse(localStorage.getItem("userData")).isAdmin || false
+
 export const prepareUserData = data => ({
   name: data.user.displayName || data.user.name || "Noname User",
   displayName: makeShowName(data.user.displayName || data.user.name || "Noname User"),
   token: data.credential && data.credential.accessToken ||data.user.refreshToken || null,
   email: data.user.email || null,
-  uid: data.user.uid || null
+  uid: data.user.uid || null,
+  isAdmin: data.user.email === adminEmail
 })
 
 export const prepareUserDataWithEmail = user => ({
@@ -56,7 +62,8 @@ export const prepareUserDataWithEmail = user => ({
   displayName: makeShowName(user.displayName || user.name || "Noname User"),
   token: user.refreshToken && user.refreshToken || null,
   email: user.email || null,
-  uid: user.uid || null
+  uid: user.uid || null,
+  isAdmin: user.email === adminEmail
 })
 
 const makeShowName = name => {

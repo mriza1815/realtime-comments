@@ -1,59 +1,48 @@
 import React, { Fragment, useEffect, useState } from "react";
-import axios from "axios";
-import Pusher from "pusher-js";
 import PropTypes from 'prop-types'
 import { FacebookLoginButton, GoogleLoginButton, createButton } from "react-social-login-buttons";
-import { socialEmailButtonConfig, socialLoginTitle, nameBadgeStyles, HAPPY_EMOJI, NEUTRAL_EMOJI, SAD_EMOJI } from "../library/constants";
+import { socialEmailButtonConfig, socialLoginTitle, nameBadgeStyles } from "../library/constants";
+import FirebaseLibrary from '../library/firebase';
 import CommentList from "./CommentList";
+import Sentiment from 'sentiment'
 
 const EmailSocialButton = createButton(socialEmailButtonConfig)
+const sentiment = new Sentiment();
 
 const CommentsWidget = props => {
   const [comments, setComments] = useState({loading: true, items: []});
   const { facebookLogin, googleLogin, emailLogin, userData, selectedTopic } = props
-  let channel;
-  let pusher;
+  const { addComment, commentListener } = FirebaseLibrary(props)
 
   useEffect(() => {
     init();
-    return () => {
-      pusher.disconnect();
-    };
-  }, [selectedTopic]);
+  }, [selectedTopic, userData]);
 
   const init = () => {
     setComments(c => ({...c, loading: true}));
-    pusher = new Pusher(process.env.PUSHER_APP_KEY, {
-      cluster: process.env.PUSHER_APP_CLUSTER,
-      encrypted: true,
-    })
-
-    channel = pusher.subscribe("post-comments");
-
-    channel.bind("new-comment",setNewComment)
-
-    pusher.connection.bind("connected", () => {
-      axios.post("/comments").then((response) => {
-        const initComments = response.data.comments.filter(c => c.topic === selectedTopic)
-        setComments({loading: false, items: initComments});
-      });
-    });
+    commentListener.on("value", newCommentHere)
   };
-  
-  const setNewComment = comment =>  comment && setComments(c => ({...c, items: [...c.items, comment.comment]}));
+
+  const newCommentHere = data => {
+    const initData = (data && data.val()) ? Object.values(data.val()).reverse() : null
+    const initComments = initData ? initData.reduce((sum, curr) => sum = [...sum, ...Object.values(curr).reverse()] , []) : []
+    setComments({loading: false, items: initComments});
+  }
 
   const handleKeyUp = (evt) => {
     const value = evt.target.value;
     if (evt.keyCode === 13 && !evt.shiftKey) {
+      const sentimentScore = sentiment.analyze(value).score;
       const comment = { 
         person: userData.displayName,
         topic: selectedTopic,
         uid: userData.uid, 
-        comment: value, 
+        comment: value,
+        sentiment: sentimentScore,
         timestamp: +new Date() 
       };
       evt.target.value = "";
-      axios.post("/comment", comment);
+      addComment(userData, comment)
     }
   };
 
@@ -93,10 +82,10 @@ const CommentsWidget = props => {
   )
 
   return (
-    <Fragment>
-      <CommentList comments={comments} />
+    <div className="w-100">
+      <CommentList userData={userData} comments={comments} />
       {renderCommentArea()}
-    </Fragment>
+    </div>
   );
 };
 

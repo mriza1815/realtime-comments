@@ -4,6 +4,8 @@ import {firebaseConfig} from "../firebase.config"
 
 let googlePr
 let facebookPr
+let database
+var commentListener
 
 const FirebaseLibrary = props => {
 
@@ -14,11 +16,20 @@ const FirebaseLibrary = props => {
       firebase.initializeApp(firebaseConfig)
       googlePr = new firebase.auth.GoogleAuthProvider();
       googlePr.addScope('https://www.googleapis.com/auth/contacts.readonly');
-      
+      database = firebase.database()
+      commentListener = database.ref('comments/');
       facebookPr = new firebase.auth.FacebookAuthProvider();
       facebookPr.addScope('user_birthday');
     }
   }
+
+  const addComment = (userData,comment) => {
+    database.ref(`comments/${userData.uid}/${comment.timestamp}`).set(comment)
+  }
+
+  const getUserComment = uid => database.ref('/comments/' + uid)
+
+  const deleteComment = id => database.ref('/comments/' + id)
 
   const makeEmailLogin = (isLogin, name, email, password) => {
     return new Promise((resolve, reject) => {
@@ -46,7 +57,7 @@ const FirebaseLibrary = props => {
     })
   }
   
-  return {firebase, googlePr, facebookPr, makeEmailLogin, makeSocialLogin }
+  return {firebase, googlePr, facebookPr, makeEmailLogin, makeSocialLogin, addComment, commentListener, getUserComment, deleteComment }
 };
 
 FirebaseLibrary.propTypes = {
